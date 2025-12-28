@@ -36,10 +36,10 @@ namespace Freecam {
         [Field("Sensitivity", FieldType.Slider, min=1f, max=20f)]
         internal static ConfigEntry<float> sensitivity;
 
-        [Field("Boost Multiplier", FieldType.Slider, min=1f, max=10f)]
+        [Field("Boost Multiplier", FieldType.Slider, min=1f, max=8f)]
         internal static ConfigEntry<float> boostMult;
 
-        [Field("Speed Change Multiplier", FieldType.Slider, min=1f, max=10f)]
+        [Field("Speed Change Multiplier", FieldType.Slider, min=1f, max=8f)]
         internal static ConfigEntry<float> speedChangeMult;
 
         [Field("Remember Position")]
