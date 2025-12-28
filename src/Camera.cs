@@ -1,0 +1,335 @@
+using System.Reflection;
+
+using HarmonyLib;
+using UILib;
+using UILib.Patches;
+using UnityEngine;
+using UnityEngine.Rendering.PostProcessing;
+using UECamera = UnityEngine.Camera;
+
+namespace Freecam {
+    internal class Camera {
+        private static Camera instance;
+
+        // The GameObject the camera is attached to
+        private GameObject root;
+
+        // The camera itself
+        private UECamera camera;
+
+        // The previous camera
+        private UECamera oldCamera;
+
+        // Post processing
+        private PostProcessLayer processLayer;
+
+        // Lock for managing pausing
+        private Lock @lock;
+
+        // Camera parameters
+        private const float minY = -89f;
+        private const float maxY = 89f;
+        private float rotX = 0f;
+        private float rotY = 0f;
+
+        /**
+         * <summary>
+         * Initializes the freecam.
+         * </summary>
+         */
+        internal Camera() {
+            instance = this;
+
+            // Create the camera
+            root = new GameObject("Freecam Camera");
+            root.tag = "MainCamera";
+            GameObject.DontDestroyOnLoad(root);
+
+            camera = root.AddComponent<UECamera>();
+            processLayer = root.AddComponent<PostProcessLayer>();
+
+            root.SetActive(false);
+
+            // Register shortcuts
+            Shortcut toggle = new Shortcut(new[] { Config.toggleKeybind });
+            toggle.onTrigger.AddListener(Toggle);
+            UIRoot.AddShortcut(toggle);
+
+            // Apply defaults
+            UpdateFov(Config.fov.Value);
+            UpdateFarClip(Config.farClipPlane.Value);
+            UpdatePostProcess(Config.postProcess.Value);
+        }
+
+        /**
+         * <summary>
+         * Updates the post processing state on this camera.
+         * </summary>
+         */
+        internal static void UpdatePostProcess(bool use) {
+            if (instance == null) {
+                return;
+            }
+
+            instance.processLayer.enabled = use;
+        }
+
+        /**
+         * <summary>
+         * Updates the fov of this camera.
+         * </summary>
+         */
+        internal static void UpdateFov(float fov) {
+            if (instance == null) {
+                return;
+            }
+
+            instance.camera.fieldOfView = fov;
+        }
+
+        /**
+         * <summary>
+         * Updates the far clip plane of this camera.
+         * </summary>
+         */
+        internal static void UpdateFarClip(float farClip) {
+            if (instance == null) {
+                return;
+            }
+
+            instance.camera.farClipPlane = farClip;
+        }
+
+        /**
+         * <summary>
+         * Copies post processing from the current camera.
+         * </summary>
+         */
+        private void CopyPostProcessing() {
+            if (oldCamera == null) {
+                return;
+            }
+
+            // Copy camera settings
+            camera.renderingPath = oldCamera.renderingPath;
+
+            // Copy post processing
+            PostProcessLayer originalLayer = oldCamera.GetComponent<PostProcessLayer>();
+            if (originalLayer == null) {
+                return;
+            }
+
+            string[] fieldNames = new[] {
+                "m_ActiveEffects", "m_Resources", "m_OldResources",
+            };
+
+            foreach (string name in fieldNames) {
+                FieldInfo info = AccessTools.Field(typeof(PostProcessLayer), name);
+                info.SetValue(processLayer, info.GetValue(originalLayer));
+            }
+
+            processLayer.antialiasingMode = originalLayer.antialiasingMode;
+            processLayer.volumeLayer = originalLayer.volumeLayer;
+        }
+
+        /**
+         * <summary>
+         * Disables freecam.
+         * </summary>
+         */
+        internal void Disable() {
+            if (UECamera.main != camera) {
+                Plugin.LogDebug("Already disabled");
+                return;
+            }
+
+            // Close pause handle
+            if (@lock != null) {
+                @lock.Close();
+                @lock = null;
+            }
+
+            root.SetActive(false);
+
+            if (oldCamera != null) {
+                oldCamera.enabled = true;
+                oldCamera = null;
+            }
+        }
+
+        /**
+         * <summary>
+         * Enables freecam.
+         * </summary>
+         */
+        internal void Enable() {
+            if (UECamera.main == camera) {
+                Plugin.LogDebug("Already enabled");
+                return;
+            }
+
+            if (UECamera.main == null) {
+                Plugin.LogDebug("Main camera is null");
+                return;
+            }
+
+            oldCamera = UECamera.main;
+
+            Plugin.LogDebug($"Switching from old camera: {oldCamera}");
+
+            // Acquire pause and navigation lock
+            if (@lock == null) {
+                @lock = new Lock(
+                    LockMode.Pause | LockMode.Navigation
+                );
+            }
+
+            // Copy post processing across
+            CopyPostProcessing();
+
+            // Go to this camera
+            if (Config.rememberPosition.Value == false) {
+                root.transform.position = oldCamera.transform.position;
+                LookAt(
+                    oldCamera.transform.eulerAngles.y,
+                    oldCamera.transform.eulerAngles.x
+                );
+            }
+
+            oldCamera.enabled = false;
+
+            root.SetActive(true);
+            camera.enabled = true;
+        }
+
+        /**
+         * <summary>
+         * Toggles freecam.
+         * </summary>
+         */
+        internal void Toggle() {
+            if (UECamera.main == camera) {
+                Disable();
+            }
+            else {
+                Enable();
+            }
+        }
+
+        /**
+         * <summary>
+         * Handles modifying the movement speed.
+         * </summary>
+         */
+        private void UpdateSpeed() {
+            // Handle speed changes
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+
+            if (scroll == 0f) {
+                return;
+            }
+
+            float speedMult = Mathf.Max(0f, Config.speedChangeMult.Value);
+            float currSpeed = Config.movementSpeed.Value;
+            float delta = (scroll < 0f) ? 1f / speedMult : speedMult;
+
+            Config.movementSpeed.Value = Mathf.Min(
+                Mathf.Max(Config.minMovementSpeed, currSpeed * delta),
+                Config.maxMovementSpeed
+            );
+        }
+
+        /**
+         * <summary>
+         * Looks in a specific rotation.
+         * </summary>
+         */
+        private void LookAt(float x, float y) {
+            // Make sure vertical is clamped
+            rotY = Mathf.Clamp(y, minY, maxY);
+            rotX = x;
+
+            root.transform.localRotation = Quaternion.Euler(
+                rotY, rotX, 0f
+            );
+        }
+
+        /**
+         * <summary>
+         * Handles looking around.
+         * </summary>
+         */
+        private void LookAround() {
+            float x = Input.GetAxis("Mouse X");
+            float y = Input.GetAxis("Mouse Y");
+
+            rotX += x * Config.sensitivity.Value;
+            rotY -= y * Config.sensitivity.Value;
+
+            LookAt(rotX, rotY);
+        }
+
+        /**
+         * <summary>
+         * Handles moving.
+         * </summary>
+         */
+        private void Move() {
+            float x = 0f;
+            float y = 0f;
+            float z = 0f;
+
+            if (Input.GetKey(Config.moveForward.Value) == true) {
+                y += 1f;
+            }
+            if (Input.GetKey(Config.moveBackward.Value) == true) {
+                y -= 1f;
+            }
+            if (Input.GetKey(Config.moveLeft.Value) == true) {
+                x -= 1f;
+            }
+            if (Input.GetKey(Config.moveRight.Value) == true) {
+                x += 1f;
+            }
+            if (Input.GetKey(Config.moveUp.Value) == true) {
+                z += 1f;
+            }
+            if (Input.GetKey(Config.moveDown.Value) == true) {
+                z -= 1f;
+            }
+
+            if (x == 0f && y == 0f && z == 0f) {
+                return;
+            }
+
+            Vector3 moveBy = (Config.movementSpeed.Value * Time.deltaTime)
+                * new Vector3(x, z, y).normalized;
+
+            if (Input.GetKey(Config.boostKeybind.Value) == true) {
+                moveBy *= Config.boostMult.Value;
+            }
+
+            root.transform.Translate(moveBy);
+        }
+
+        /**
+         * <summary>
+         * Handles controls.
+         * </summary>
+         */
+        internal void Update() {
+            // Don't control if the camera is currently
+            // disabled, or shortcuts can't run
+            if (UECamera.main != camera
+                || Shortcut.canRun == false
+                || LockHandler.isCursorFree == true
+            ) {
+                return;
+            }
+
+            UpdateSpeed();
+            LookAround();
+            Move();
+        }
+    }
+}
