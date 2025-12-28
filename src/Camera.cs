@@ -245,7 +245,7 @@ namespace Freecam {
                 return;
             }
 
-            float speedMult = Mathf.Max(0f, Config.speedChangeMult.Value);
+            float speedMult = Mathf.Max(1f, Config.speedChangeMult.Value);
             float currSpeed = Config.movementSpeed.Value;
             float delta = (scroll < 0f) ? 1f / speedMult : speedMult;
 
