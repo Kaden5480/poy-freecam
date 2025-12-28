@@ -174,7 +174,7 @@ namespace Freecam {
             Plugin.LogDebug($"Switching from old camera: {Cache.playerCamera}");
 
             // Acquire pause lock
-            if (@lock == null) {
+            if (Config.pauseGame.Value == true && @lock == null) {
                 @lock = new Lock(LockMode.Pause);
             }
 

@@ -14,6 +14,7 @@ namespace Freecam {
      * </summary>
      */
     internal class SpeedOverlay {
+        private static SpeedOverlay instance;
         private IEnumerator coroutine;
 
         private Overlay overlay;
@@ -28,16 +29,14 @@ namespace Freecam {
          * </summary>
          */
         internal SpeedOverlay() {
-            // Copy of the current user theme
+            instance = this;
+
             Theme theme = Theme.GetTheme();
-            theme.overlayOpacity = 0.95f;
-            theme.overlayFadeTime = 0.2f;
 
             overlay = new Overlay(300f, 100f);
             overlay.SetAnchor(AnchorType.TopMiddle);
             overlay.SetOffset(0f, -200f);
             overlay.SetLockMode(LockMode.None);
-            overlay.SetTheme(theme);
 
             background = new Image(theme.background);
             background.SetFill(FillType.All);
@@ -55,6 +54,22 @@ namespace Freecam {
             currentBoost.SetSize(200f, 20f);
             currentBoost.SetColor(theme.selectAltHighlight);
             background.Add(currentBoost);
+
+            // Set the theme
+            UpdateTheme(0f);
+        }
+
+        /**
+         * <summary>
+         * Updates the opacity of the overlay.
+         * </summary>
+         */
+        internal static void UpdateTheme(float _) {
+            Theme theme = Theme.GetTheme();
+            theme.overlayOpacity = Config.overlayOpacity.Value;
+            theme.overlayFadeTime = Config.overlayFadeTime.Value;
+
+            instance.overlay.SetTheme(theme);
         }
 
         /**
@@ -63,7 +78,7 @@ namespace Freecam {
          * </summary>
          */
         private IEnumerator DisplayRoutine() {
-            float waitTime = 2.5f;
+            float waitTime = Config.overlayWaitTime.Value;
             overlay.Show();
 
             // Wait a bit

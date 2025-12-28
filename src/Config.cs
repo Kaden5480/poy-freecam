@@ -45,6 +45,9 @@ namespace Freecam {
         [Field("Remember Position")]
         internal static ConfigEntry<bool> rememberPosition;
 
+        [Field("Pause Game")]
+        internal static ConfigEntry<bool> pauseGame;
+
         // Keybinds
         [Field("Toggle Keybind")]
         internal static ConfigEntry<KeyCode> toggleKeybind;
@@ -77,6 +80,18 @@ namespace Freecam {
         [Category("Keybinds")]
         [Field("Decrease Speed")]
         internal const string decreaseSpeed = "Mouse Wheel Down";
+
+        // UI
+        [Listener(typeof(SpeedOverlay), nameof(SpeedOverlay.UpdateTheme))]
+        [Field("Overlay Opacity", FieldType.Slider, min=0f, max=1f)]
+        internal static ConfigEntry<float> overlayOpacity;
+
+        [Field("Overlay Wait Time", FieldType.Slider, min=0f, max=8f)]
+        internal static ConfigEntry<float> overlayWaitTime;
+
+        [Listener(typeof(SpeedOverlay), nameof(SpeedOverlay.UpdateTheme))]
+        [Field("Overlay Fade Time", FieldType.Slider, min=0f, max=8f)]
+        internal static ConfigEntry<float> overlayFadeTime;
 
 
         /**
@@ -130,6 +145,11 @@ namespace Freecam {
                 + " position when enabled."
             );
 
+            pauseGame = configFile.Bind(
+                "General", "pauseGame", true,
+                "Whether the game should pause when entering freecam."
+            );
+
             // Keybinds
             toggleKeybind = configFile.Bind(
                 "Keybinds", "toggleKeybind", KeyCode.F9,
@@ -169,6 +189,24 @@ namespace Freecam {
             boostKeybind = configFile.Bind(
                 "Keybinds", "boostKeybind", KeyCode.LeftShift,
                 "The keybind to go faster."
+            );
+
+            // UI
+            overlayOpacity = configFile.Bind(
+                "UI", "overlayOpacity", 0.95f,
+                "The maximum opacity of the speed overlay"
+            );
+
+            overlayWaitTime = configFile.Bind(
+                "UI", "overlayWaitTime", 2.5f,
+                "How much time to wait before letting the"
+                + " speed overlay fade back out"
+            );
+
+            overlayFadeTime = configFile.Bind(
+                "UI", "overlayFadeTime", 0.2f,
+                "How long it will take for the speed overlay"
+                + " to fade in/out"
             );
         }
     }
