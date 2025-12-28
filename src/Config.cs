@@ -117,17 +117,17 @@ namespace Freecam {
                 "How much the boost keybind should multiply speed."
             );
 
+            speedChangeMult = configFile.Bind(
+                "General", "speedChangeMult", 2f,
+                "How much the movement speed should change when the"
+                + " mouse wheel is scrolled up/down."
+            );
+
             rememberPosition = configFile.Bind(
                 "General", "rememberPosition", false,
                 "Whether the freecam should remember its last position,"
                 + " instead of teleporting to the player's current"
                 + " position when enabled."
-            );
-
-            speedChangeMult = configFile.Bind(
-                "General", "speedChangeMult", 2f,
-                "How much the movement speed should change when the"
-                + " mouse wheel is scrolled up/down."
             );
 
             // Keybinds

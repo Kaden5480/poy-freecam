@@ -11,16 +11,16 @@ namespace Freecam {
     internal class Camera {
         private static Camera instance;
 
-        // The GameObject the camera is attached to
+        // The GameObject this camera is attached to
         private GameObject root;
 
         // The camera itself
         private UECamera camera;
 
-        // The previous camera
-        private UECamera oldCamera;
+        // Audio listener for this camera
+        private AudioListener listener;
 
-        // Post processing
+        // Post processing for this camera
         private PostProcessLayer processLayer;
 
         // Lock for managing pausing
@@ -46,8 +46,10 @@ namespace Freecam {
             GameObject.DontDestroyOnLoad(root);
 
             camera = root.AddComponent<UECamera>();
+            listener = root.AddComponent<AudioListener>();
             processLayer = root.AddComponent<PostProcessLayer>();
 
+            camera.enabled = false;
             root.SetActive(false);
 
             // Register shortcuts
@@ -106,15 +108,15 @@ namespace Freecam {
          * </summary>
          */
         private void CopyPostProcessing() {
-            if (oldCamera == null) {
+            if (Cache.playerCamera == null) {
                 return;
             }
 
             // Copy camera settings
-            camera.renderingPath = oldCamera.renderingPath;
+            camera.renderingPath = Cache.playerCamera.renderingPath;
 
             // Copy post processing
-            PostProcessLayer originalLayer = oldCamera.GetComponent<PostProcessLayer>();
+            PostProcessLayer originalLayer = Cache.playerCamera.GetComponent<PostProcessLayer>();
             if (originalLayer == null) {
                 return;
             }
@@ -134,6 +136,65 @@ namespace Freecam {
 
         /**
          * <summary>
+         * Goes to the player's current position and rotation.
+         * </summary>
+         */
+        private void GoToPlayer() {
+            root.transform.position = Cache.playerCamera.transform.position;
+            LookAt(
+                Cache.playerCamX.transform.eulerAngles.y,
+                Cache.playerCamY.desiredRotationY
+            );
+        }
+
+        /**
+         * <summary>
+         * Enables freecam.
+         * </summary>
+         */
+        internal void Enable() {
+            UECamera main = UECamera.main;
+
+            if (Cache.playerCamX == null || Cache.playerCamY == null) {
+                Plugin.LogDebug(
+                    "Unable to enable freecam, the player's camera"
+                    + " appears to be missing from this scene"
+                );
+                return;
+            }
+
+            if (main != Cache.playerCamera) {
+                Plugin.LogDebug(
+                    "Unable to enable freecam, the current main"
+                    + " is not the player's camera"
+                );
+                return;
+            }
+
+            Plugin.LogDebug($"Switching from old camera: {Cache.playerCamera}");
+
+            // Acquire pause lock
+            if (@lock == null) {
+                @lock = new Lock(LockMode.Pause);
+            }
+
+            // Copy post processing across
+            CopyPostProcessing();
+
+            // Go to the player if not remembering
+            if (Config.rememberPosition.Value == false) {
+                GoToPlayer();
+            }
+
+            // Disable the camera
+            Cache.playerCamera.enabled = false;
+
+            root.SetActive(true);
+            camera.enabled = true;
+        }
+
+        /**
+         * <summary>
          * Disables freecam.
          * </summary>
          */
@@ -149,57 +210,12 @@ namespace Freecam {
                 @lock = null;
             }
 
+            camera.enabled = false;
             root.SetActive(false);
 
-            if (oldCamera != null) {
-                oldCamera.enabled = true;
-                oldCamera = null;
+            if (Cache.playerCamera != null) {
+                Cache.playerCamera.enabled = true;
             }
-        }
-
-        /**
-         * <summary>
-         * Enables freecam.
-         * </summary>
-         */
-        internal void Enable() {
-            if (UECamera.main == camera) {
-                Plugin.LogDebug("Already enabled");
-                return;
-            }
-
-            if (UECamera.main == null) {
-                Plugin.LogDebug("Main camera is null");
-                return;
-            }
-
-            oldCamera = UECamera.main;
-
-            Plugin.LogDebug($"Switching from old camera: {oldCamera}");
-
-            // Acquire pause and navigation lock
-            if (@lock == null) {
-                @lock = new Lock(
-                    LockMode.Pause | LockMode.Navigation
-                );
-            }
-
-            // Copy post processing across
-            CopyPostProcessing();
-
-            // Go to this camera
-            if (Config.rememberPosition.Value == false) {
-                root.transform.position = oldCamera.transform.position;
-                LookAt(
-                    oldCamera.transform.eulerAngles.y,
-                    oldCamera.transform.eulerAngles.x
-                );
-            }
-
-            oldCamera.enabled = false;
-
-            root.SetActive(true);
-            camera.enabled = true;
         }
 
         /**
