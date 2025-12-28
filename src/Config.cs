@@ -10,7 +10,7 @@ namespace Freecam {
      */
     internal static class Config {
         internal const float minMovementSpeed = 1f;
-        internal const float maxMovementSpeed = 1024f;
+        internal const float maxMovementSpeed = 2048f;
 
         // General
         [Listener(typeof(Freecam.Camera), nameof(Freecam.Camera.UpdateFov))]
