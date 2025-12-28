@@ -253,6 +253,8 @@ namespace Freecam {
                 Mathf.Max(Config.minMovementSpeed, currSpeed * delta),
                 Config.maxMovementSpeed
             );
+
+            Plugin.instance.speedOverlay.Show();
         }
 
         /**

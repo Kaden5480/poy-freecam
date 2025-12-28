@@ -10,7 +10,9 @@ using UILib.Patches;
 namespace Freecam {
     [BepInPlugin("com.github.Kaden5480.poy-freecam", "Freecam", PluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin {
-        private static Plugin instance;
+        internal static Plugin instance { get; private set; }
+        internal SpeedOverlay speedOverlay { get; private set; }
+
         private Camera camera;
 
         /**
@@ -24,8 +26,9 @@ namespace Freecam {
             // Initialize config
             Freecam.Config.Init(this.Config);
 
-            // Initialize the freecam
+            // Initialize the freecam and overlay
             UIRoot.onInit.AddListener(() => {
+                speedOverlay = new SpeedOverlay();
                 camera = new Camera();
             });
 
