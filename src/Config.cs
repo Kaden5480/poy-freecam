@@ -45,6 +45,7 @@ namespace Freecam {
         [Field("Remember Position")]
         internal static ConfigEntry<bool> rememberPosition;
 
+        [Listener(typeof(Freecam.Camera), nameof(Freecam.Camera.UpdatePause))]
         [Field("Pause Game")]
         internal static ConfigEntry<bool> pauseGame;
 

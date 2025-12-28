@@ -23,8 +23,9 @@ namespace Freecam {
         // Post processing for this camera
         private PostProcessLayer processLayer;
 
-        // Lock for managing pausing
+        // Lock for managing pausing and mode to use normally
         private Lock @lock;
+        private const LockMode defaultLockMode = LockMode.Pause;
 
         // Camera parameters
         private const float minY = -89f;
@@ -61,6 +62,24 @@ namespace Freecam {
             UpdateFov(Config.fov.Value);
             UpdateFarClip(Config.farClipPlane.Value);
             UpdatePostProcess(Config.postProcess.Value);
+        }
+
+        /**
+         * <summary>
+         * Updates the pause lock.
+         * </summary>
+         */
+        internal static void UpdatePause(bool pause) {
+            if (instance.@lock == null) {
+                return;
+            }
+
+            if (pause == true) {
+                instance.@lock.SetMode(defaultLockMode);
+            }
+            else {
+                instance.@lock.SetMode(LockMode.None);
+            }
         }
 
         /**
@@ -174,9 +193,11 @@ namespace Freecam {
             Plugin.LogDebug($"Switching from old camera: {Cache.playerCamera}");
 
             // Acquire pause lock
-            if (Config.pauseGame.Value == true && @lock == null) {
-                @lock = new Lock(LockMode.Pause);
+            if (@lock == null) {
+                @lock = new Lock();
             }
+
+            UpdatePause(Config.pauseGame.Value);
 
             // Copy post processing across
             CopyPostProcessing();
