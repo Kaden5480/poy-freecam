@@ -8,6 +8,11 @@ using UILib;
 using UILib.Patches;
 
 namespace Freecam {
+    [BepInDependency("com.github.Kaden5480.poy-ui-lib")]
+    [BepInDependency(
+        "com.github.Kaden5480.poy-mod-menu",
+        BepInDependency.DependencyFlags.SoftDependency
+    )]
     [BepInPlugin("com.github.Kaden5480.poy-freecam", "Freecam", PluginInfo.PLUGIN_VERSION)]
     public class Plugin : BaseUnityPlugin {
         internal static Plugin instance { get; private set; }
