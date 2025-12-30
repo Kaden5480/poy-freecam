@@ -43,11 +43,11 @@ namespace Freecam {
                 CamFixes.SceneLoad();
             });
             SceneLoads.AddUnloadListener(delegate {
-                Cache.Clear();
-
                 if (camera != null) {
                     camera.Disable();
                 }
+
+                Cache.Clear();
             });
 
             // Register with Mod Menu
