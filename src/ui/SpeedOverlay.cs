@@ -67,7 +67,8 @@ namespace Freecam {
         internal static void UpdateTheme(float _) {
             Theme theme = Theme.GetTheme();
             theme.overlayOpacity = Config.overlayOpacity.Value;
-            theme.overlayFadeTime = Config.overlayFadeTime.Value;
+            theme.easeInTime = Config.overlayFadeTime.Value;
+            theme.easeOutTime = Config.overlayFadeTime.Value;
 
             instance.overlay.SetTheme(theme);
         }
